@@ -1,4 +1,6 @@
 # %%
+from typing import List
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,7 +11,8 @@ class UNet1D(nn.Module):
     def __init__(
         self,
         time_length: int = 32,
-        channels: int = 1,
+        in_channels: int = 1,
+        hidden_channels: List[int] = [4, 8, 16],
         **kwargs
     ):
         """Unet architecture
@@ -23,71 +26,57 @@ class UNet1D(nn.Module):
         """
         super().__init__(**kwargs)
 
-        n_channels_1 = 4
-        n_channels_2 = 8
-        n_channels_3 = 16
-        self.reduced_time_length = time_length / 8
-        n_channels_4 = self.reduced_time_length * n_channels_2
+        self.n_conv_steps = len(hidden_channels)
+        effective_channels = [in_channels] + hidden_channels
+        reduced_time_length = int(time_length / (2**self.n_conv_steps))
+        hidden_features = reduced_time_length * hidden_channels[-1]
+        self.hidden_shape = (-1, reduced_time_length, hidden_channels[-1])
 
-        self.conv_1 = nn.Conv1d(
-            in_channels=channels,
-            out_channels=n_channels_1,
-            kernel_size=3
-        )
-        self.pool_1 = nn.MaxPool1d(
-            kernel_size=2
-        )
-        self.conv_2 = nn.Conv1d(
-            in_channels=n_channels_1,
-            out_channels=n_channels_2,
-            kernel_size=3
-        )
-        self.pool_2 = nn.MaxPool1d(
-            kernel_size=2    
-        )
-        self.conv_3 = nn.Conv1d(
-            in_channels=n_channels_2,
-            out_channels=n_channels_3,
-            kernel_size=3
-        )
-        self.pool_3 = nn.MaxPool1d(
-            kernel_size=2  
+        self.convs = []
+        self.pools = []
+        self.deconvs = []
+        self.depools = []
+
+        for idx in range(self.n_conv_steps):
+            self.convs.append(
+                nn.Conv1d(
+                    in_channels=effective_channels[idx],
+                    out_channels=effective_channels[idx + 1],
+                    kernel_size=3,
+                    padding=1
+                )
+            )
+            self.pools.append(
+                nn.MaxPool1d(
+                    kernel_size=2
+                )
+            )
+        
+        self.linear = nn.Linear(
+            in_features=hidden_features,
+            out_features=hidden_features
         )
 
-        self.conv_4 = nn.Conv1d(
-            in_channels=n_channels_3,
-            out_channels=n_channels_3,
+        for idx in range(self.n_conv_steps):
+            self.deconvs.append(
+                nn.Conv1d(
+                    in_channels=effective_channels[-1 - idx],
+                    out_channels=effective_channels[-2 - idx],
+                    kernel_size=3,
+                    padding=1
+                )
+            )
+            self.depools.append(
+                nn.Upsample(
+                    scale_factor=2
+                )
+            )
+        
+        self.output = nn.Conv1d(
+            in_channels=in_channels,
+            out_channels=in_channels,
             kernel_size=1
         )
-
-        self.up_sample_1 = nn.Upsample(
-            scale_factor=2
-        )
-        self.deconv_1 = nn.ConvTranspose1d(
-            in_channels=n_channels_3,
-            out_channels=n_channels_2,
-            kernel_size=3
-        )        
-        self.up_sample_2 = nn.Upsample(
-            scale_factor=2
-        )
-        self.deconv_2 = nn.ConvTranspose1d(
-            in_channels=n_channels_2,
-            out_channels=n_channels_1,
-            kernel_size=3
-        )
-        self.up_sample_3 = nn.Upsample(
-            scale_factor=2
-        )
-        self.deconv_3 = nn.ConvTranspose1d(
-            in_channels=n_channels_1,
-            out_channels=channels,
-            kernel_size=3
-        )
-
-        self.up_sample_4 = nn.Upsample(
-            size=time_length
-        )    
 
     def forward(
         self,
@@ -106,51 +95,28 @@ class UNet1D(nn.Module):
             (B, C, T)
         """
 
-        z = F.relu(self.conv_1(x))
-        z = self.pool_1(z)
+        z = x
 
-        z = F.relu(self.conv_2(z))
-        z = self.pool_2(z)
+        for idx in range(self.n_conv_steps):
+            z = F.relu(self.convs[idx](z))
+            z = self.pools[idx](z)
 
-        z = F.relu(self.conv_3(z))
-        z = self.pool_3(z)
 
-        z = F.relu(self.conv_4(z))
+        z = torch.flatten(
+            z,
+            start_dim=1,
+            end_dim=-1
+        )
 
-        z = self.up_sample_1(z)
-        z = F.relu(self.deconv_1(z))
+        z = F.relu(self.linear(z))
+        z = z.reshape(
+            self.hidden_shape
+        )
 
-        z = self.up_sample_2(z)
-        z = F.relu(self.deconv_2(z))
+        for idx in range(self.n_conv_steps):
+            z = self.depools[idx](z)
+            z = F.relu(self.deconvs[idx](z))
+  
+        z = self.output(z)
 
-        z = self.up_sample_3(z)
-        z = F.relu(self.deconv_3(z))
-
-        y = self.up_sample_4(z)
-
-        return y
-
-# %%
-
-batch_size = 1
-time_length = 32
-channels = 4
-
-# %%
-model = UNet1D(
-    time_length=time_length,
-    channels=channels
-)
-
-# %%
-
-x = torch.zeros(
-    (batch_size, channels, time_length)
-)
-
-y = model(x)
-
-y.shape
-# %%
-
-# %%
+        return z
