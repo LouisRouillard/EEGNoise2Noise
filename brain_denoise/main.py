@@ -1,7 +1,7 @@
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from torch import nn
 from brain_denoise.linear_net import LinearNet
-from brain_denoise.data.simluator import simluate_data
+from brain_denoise.data.simluator import simulate_data
 import torch
 import numpy as np
 from torch.nn import MSELoss
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     device = "cpu"
 
     # Data
-    data_in, data_out, signal = simluate_data(
+    data_in, data_out, signal = simulate_data(
         ns, nc, nt, noise_types=["gaussian", "dirac"]
     )
 
