@@ -5,6 +5,7 @@ from brain_denoise.data.simluator import simluate_data
 import torch
 import numpy as np
 from torch.nn import MSELoss
+from .train import train
 
 
 def split_idx(n, splits=(0.6, 0.8, 1), shuffle=False):
@@ -45,3 +46,6 @@ if __name__ == "__main__":
 
     # Intiate Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+
+    # Train
+    train(train_loader, model, loss, optimizer)
