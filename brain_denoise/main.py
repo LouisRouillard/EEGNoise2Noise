@@ -6,7 +6,7 @@ import torch
 import numpy as np
 from torch.nn import MSELoss
 from train import train_eval_model, run_epoch
-
+from utils import split_idx
 
 def split_idx(n, splits=(0.6, 0.8, 1), shuffle=False):
     idx = torch.arange(n)
@@ -21,9 +21,10 @@ def split_idx(n, splits=(0.6, 0.8, 1), shuffle=False):
 
 if __name__ == "__main__":
     # Params
-    ns, nc, nt = 1000, 50, 10
+    ns, nc, nt = 1000, 50, 16
     bs = 10
     device = "cpu"
+    n_epochs = 20
 
     # Data
     data_in, data_out, signal = simulate_data(
@@ -33,7 +34,7 @@ if __name__ == "__main__":
     # Build loader
     dataset = TensorDataset(data_in, data_out)
     testset = TensorDataset(data_in, signal)
-    train, valid, test = split_idx(len(dataset))
+    train, valid, test = split_idx(len(dataset), splits=(0.6, 0.8, 1))
     train_loader = DataLoader(dataset[train], batch_size=bs)
     valid_loader = DataLoader(dataset[valid], batch_size=bs)
     test_loader = DataLoader(testset[test], batch_size=bs)
@@ -42,8 +43,8 @@ if __name__ == "__main__":
     model = LinearNet(nc, nt)
     model.to(device)
 
-    # Instantiate Loss
-    loss = MSELoss()
+    # Initiate Loss
+    loss = MSELoss(reduce=None)
 
     # Instantiate Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)

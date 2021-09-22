@@ -50,9 +50,6 @@ def train_eval_model(
     device="cpu",
 ):
     for epoch in range(n_epochs):
-        epoch_loss = 0
-        n_samples = 0
-
         # Train set
         train_loss = run_epoch(
             dataloader=train_loader, 
@@ -64,7 +61,7 @@ def train_eval_model(
             n_epochs=n_epochs
         )
 
-        # Run eval
+        # Validation set
         if valid_loader is not None:
             val_loss = run_epoch(
                 dataloader=valid_loader, 
@@ -78,7 +75,7 @@ def train_eval_model(
         else:
             val_loss = np.nan
 
-        # Run test
+        # Test set
         if test_loader is not None:
             test_loss = run_epoch(
                 dataloader=test_loader, 
