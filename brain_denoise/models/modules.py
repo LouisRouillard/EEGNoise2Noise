@@ -30,7 +30,7 @@ class UNet1D(nn.Module):
         effective_channels = [in_channels] + hidden_channels
         reduced_time_length = int(time_length / (2**self.n_conv_steps))
         hidden_features = reduced_time_length * hidden_channels[-1]
-        self.hidden_shape = (-1, reduced_time_length, hidden_channels[-1])
+        self.hidden_shape = (-1, hidden_channels[-1], reduced_time_length)
 
         self.convs = []
         self.pools = []
@@ -120,3 +120,14 @@ class UNet1D(nn.Module):
         z = self.output(z)
 
         return z
+
+# %%
+nt, nc = 10, 4
+model = UNet1D(
+    time_length=nt,
+    in_channels=nc,
+    hidden_channels=[4, 8]
+)
+# %%
+model(torch.zeros((1, nc, nt)))
+# %%
