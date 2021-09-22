@@ -30,7 +30,7 @@ def plot_signals(
                 t,
                 noisy_signal[b, c],
                 "b-",
-                alpha=0.1
+                alpha=0.2
             )
             axes[c, b].plot(
                 t,
