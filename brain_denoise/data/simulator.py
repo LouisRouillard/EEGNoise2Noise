@@ -95,7 +95,7 @@ def generate_noise(ns, nc, nt, noise_types=["gaussian"]):
     return noise
 
 
-def simulate_data(ns, nc, nt, signal_type="sin", noise_types=["gaussian"], seed=44):
+def simulate_data(ns, nc, nt, signal_type="sin", noise_types=["gaussian"], noise_scale=0.9, seed=44):
     """
     Return data_in and data_out of shape (ns, nc, nt), two noisy versions
     of the same signal.
@@ -106,12 +106,18 @@ def simulate_data(ns, nc, nt, signal_type="sin", noise_types=["gaussian"], seed=
 
     signal = generate_signal(ns, nc, nt, signal_type=signal_type)
 
+    signal_power = 1/nt * np.sum(signal**2)
+
     # Noise1
     noise_in = generate_noise(ns, nc, nt, noise_types=noise_types)
-    data_in = signal + noise_in
+    noise_in_power = 1/nt * np.sum(noise_in**2)
+    SNR_in = signal_power / noise_in_power
+    data_in = signal + noise_in * np.sqrt(SNR_in) / np.sqrt(noise_scale)
 
     # Noise2
     noise_out = generate_noise(ns, nc, nt, noise_types=noise_types)
-    data_out = signal + noise_out
+    noise_out_power = 1/nt * np.sum(noise_out**2)
+    SNR_out = signal_power / noise_out_power
+    data_out = signal + noise_out * np.sqrt(SNR_out) / np.sqrt(noise_scale)
 
     return data_in, data_out, signal

@@ -1,51 +1,91 @@
 import torch
-from run_eval import run_eval
 import numpy as np
 
-# Train
-def train(
-    dataloader,
-    model,
-    loss_fn,
-    optimizer,
+# Optimization: one epoch
+def run_epoch(
+    dataloader, 
+    model, 
+    loss_fn, 
+    device="cpu", 
+    train=True,
+    optimizer=None,
     n_epochs=10,
-    validloader=None,
-    testloader=None,
-    device="cpu",
-):
-    size = len(dataloader.dataset)
-    model.train()
+    ):
+    if train:
+        model.train()
+    else:
+        model.eval()
 
-    for epoch in range(n_epochs):
-        epoch_loss = 0
-        n_samples = 0
-        for batch, (X, y) in enumerate(dataloader):
-            X, y = X.to(device), y.to(device)
+    final_loss = 0
+    n_samples = 0
+    for batch, (X, y) in enumerate(dataloader):
+        X, y = X.to(device), y.to(device)
 
-            # Compute prediction error
-            pred = model(X)
-            loss = loss_fn(pred, y)
+        # Compute prediction error
+        y_pred = model(X)
+        loss = loss_fn(y_pred, y)
 
-            # Backpropagation
+        # Backpropagation
+        if train:
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            epoch_loss += loss.item()
-            n_samples += len(X)
+        # Monitor loss
+        final_loss += loss
+        n_samples += len(X)
 
-        # Train loss
-        train_loss = epoch_loss/n_samples
+    return final_loss / n_samples
 
-        # Run eval
-        if validloader is not None:
-            val_loss = run_eval(validloader, model, loss_fn)
+
+# Optimization: all epochs
+def train_eval_model(
+    train_loader,
+    model,
+    loss_fn,
+    optimizer,
+    n_epochs=10,
+    valid_loader=None,
+    test_loader=None,
+    device="cpu",
+):
+    for epoch in range(n_epochs):
+        # Train set
+        train_loss = run_epoch(
+            dataloader=train_loader, 
+            model=model, 
+            loss_fn=loss_fn, 
+            device=device, 
+            train=True,
+            optimizer=optimizer,
+            n_epochs=n_epochs
+        )
+
+        # Validation set
+        if valid_loader is not None:
+            val_loss = run_epoch(
+                dataloader=valid_loader, 
+                model=model, 
+                loss_fn=loss_fn, 
+                device=device, 
+                train=False,
+                optimizer=None,
+                n_epochs=n_epochs
+            )
         else:
             val_loss = np.nan
 
-        # Run test
-        if testloader is not None:
-            test_loss = run_eval(testloader, model, loss_fn)
+        # Test set
+        if test_loader is not None:
+            test_loss = run_epoch(
+                dataloader=test_loader, 
+                model=model, 
+                loss_fn=loss_fn, 
+                device=device, 
+                train=False,
+                optimizer=None,
+                n_epochs=n_epochs
+            )        
         else:
             test_loss = np.nan
 
