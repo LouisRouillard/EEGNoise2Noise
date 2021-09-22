@@ -1,0 +1,22 @@
+{
+    "sync-rsync.onSave": true,
+    "sync-rsync.exclude": [
+        ".git",
+        ".vscode",
+    ],
+    "sync-rsync.local": "/Users/omar/Desktop/EEGNoise2Noise",
+    "sync-rsync.remote": "lchehab@drago3:/home/parietal/lchehab/Desktop/EEGNoise2Noise",
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Args": [
+        "--max-line-length=120",
+        "--ignore=E402, W503, E731",
+    ],
+    "python.formatting.provider": "black",
+    "python.formatting.blackPath": "/Users/omar/anaconda3/envs/nonlinear-ica/bin/black",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false,
+    "git.ignoreLimitWarning": true,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false
+}

@@ -63,10 +63,10 @@ train_eval_model(
 )
 
 final_loss = run_epoch(
-    dataloader=test_loader, 
-    model=model, 
-    loss_fn=loss, 
-    device="cpu", 
+    dataloader=test_loader,
+    model=model,
+    loss_fn=loss,
+    device="cpu",
     train=False,
     optimizer=None,
     n_epochs=100,

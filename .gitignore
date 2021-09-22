@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# torch extensions (data saved)
+*.th
+
 # Distribution / packaging
 .Python
 build/
