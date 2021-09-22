@@ -22,9 +22,10 @@ def split_idx(n, splits=(0.6, 0.8, 1), shuffle=False):
 
 if __name__ == "__main__":
     # Params
-    ns, nc, nt = 1000, 50, 10
+    ns, nc, nt = 1000, 50, 16
     bs = 10
     device = "cpu"
+    n_epochs = 20
 
     # Data
     data_in, data_out, signal = simulate_data(
@@ -34,7 +35,7 @@ if __name__ == "__main__":
     # Build loader
     dataset = TensorDataset(data_in, data_out)
     testset = TensorDataset(data_in, signal)
-    train, valid, test = split_idx(len(dataset))
+    train, valid, test = split_idx(len(dataset), splits=(0.6, 0.8, 1))
     train_loader = DataLoader(dataset[train], batch_size=bs)
     valid_loader = DataLoader(dataset[valid], batch_size=bs)
     test_loader = DataLoader(testset[test], batch_size=bs)
@@ -44,7 +45,7 @@ if __name__ == "__main__":
     model.to(device)
 
     # Initiate Loss
-    loss = MSELoss()
+    loss = MSELoss(reduce=None)
 
     # Intiate Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -57,6 +58,7 @@ if __name__ == "__main__":
         optimizer,
         validloader=valid_loader,
         testloader=test_loader,
+        n_epochs=n_epochs,
     )
     final_loss = run_eval(test_loader, model, loss)
     print(f"Final test loss : {final_loss:>3f}")
