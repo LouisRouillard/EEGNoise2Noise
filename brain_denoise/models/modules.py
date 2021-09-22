@@ -60,7 +60,7 @@ class UNet1D(nn.Module):
         for idx in range(self.n_conv_steps):
             self.deconvs.append(
                 nn.Conv1d(
-                    in_channels=effective_channels[-1 - idx],
+                    in_channels=2 * effective_channels[-1 - idx],
                     out_channels=effective_channels[-2 - idx],
                     kernel_size=3,
                     padding=1
@@ -100,10 +100,11 @@ class UNet1D(nn.Module):
 
         z = x
 
+        skip_zs = [z]
         for idx in range(self.n_conv_steps):
-            z = F.relu(self.convs[idx](z))
+            z = F.elu(self.convs[idx](z))
             z = self.pools[idx](z)
-
+            skip_zs.append(z)
 
         z = torch.flatten(
             z,
@@ -111,27 +112,23 @@ class UNet1D(nn.Module):
             end_dim=-1
         )
 
-        z = F.relu(self.linear(z))
+        z = F.elu(self.linear(z))
         z = z.reshape(
             self.hidden_shape
         )
 
         for idx in range(self.n_conv_steps):
-            z = self.depools[idx](z)
-            z = F.relu(self.deconvs[idx](z))
+            z_concat = torch.cat(
+                [
+                    z,
+                    skip_zs[-1 - idx]
+                ],
+                axis=-2
+            )
+            z = self.depools[idx](z_concat)
+            z = F.elu(self.deconvs[idx](z))
   
         z = self.reshaper_to_length(z)
         z = self.output(z)
 
         return z
-
-# %%
-nt, nc = 10, 50
-model = UNet1D(
-    time_length=nt,
-    in_channels=nc,
-    hidden_channels=[4, 8]
-)
-# %%
-model(torch.zeros((1, nc, nt))).shape
-# %%

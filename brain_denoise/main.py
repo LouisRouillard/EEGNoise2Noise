@@ -1,64 +1,76 @@
+# %%
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from torch import nn
+from models.linear_net import LinearNet
+from models.modules import UNet1D
+from data.simulator import simulate_data
+from visualizers.time_series import plot_signals
 import torch
 import numpy as np
 from torch.nn import MSELoss
 from train import train_eval_model, run_epoch
 from utils import split_idx
 
-from brain_denoise.models.linear_net import LinearNet
-from brain_denoise.data.simulator import simulate_data
+# %%
+# Params
+ns, nc, nt = 1000, 3, 128
+bs = 10
+device = "cpu"
 
+# Data
+data_in, data_out, signal = simulate_data(
+    ns, nc, nt, noise_types=["gaussian", "dirac"]
+)
 
-if __name__ == "__main__":
-    # Params
-    ns, nc, nt = 1000, 50, 16
-    bs = 10
-    device = "cpu"
-    n_epochs = 20
+# Build loader
+dataset = TensorDataset(data_in, data_out)
+testset = TensorDataset(data_in, signal)
+train, valid, test = split_idx(len(dataset))
+train_loader = DataLoader(dataset[train], batch_size=bs)
+valid_loader = DataLoader(dataset[valid], batch_size=bs)
+test_loader = DataLoader(testset[test], batch_size=bs)
 
-    # Data
-    data_in, data_out, signal = simulate_data(
-        ns, nc, nt, noise_types=["gaussian", "dirac"]
-    )
+# Initiate Model
+model = UNet1D(
+    time_length=nt,
+    in_channels=nc,
+    hidden_channels=[16, 32]
+)
+model.to(device)
 
-    # Build loader
-    dataset = TensorDataset(data_in, data_out)
-    testset = TensorDataset(data_in, signal)
-    train, valid, test = split_idx(len(dataset), splits=(0.6, 0.8, 1))
-    train_loader = DataLoader(dataset[train], batch_size=bs)
-    valid_loader = DataLoader(dataset[valid], batch_size=bs)
-    test_loader = DataLoader(testset[test], batch_size=bs)
+# Initiate Loss
+loss = MSELoss()
 
-    # Instantiate Model
-    model = LinearNet(nc, nt)
-    model.to(device)
+# Intiate Optimizer
+optimizer = torch.optim.Adam(
+    model.parameters(),
+    lr=1e-2,
+    weight_decay=1e-3
+)
 
-    # Initiate Loss
-    loss = MSELoss(reduce=None)
+# Train
+# %%
+train_model(
+    train_loader,
+    model,
+    loss,
+    optimizer,
+    validloader=valid_loader,
+    testloader=test_loader,
+    n_epochs=500
+)
+final_loss = run_eval(test_loader, model, loss)
+print(f"Final test loss : {final_loss:>3f}")
+# %%
 
-    # Instantiate Optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+data_pred = model(data_in)
 
-    # Train
-    train_eval_model(
-        train_loader=train_loader,
-        model=model,
-        loss_fn=loss,
-        optimizer=optimizer,
-        valid_loader=valid_loader,
-        test_loader=test_loader,
-        device=device,
-        n_epochs=10,
-    )
+# %%
 
-    final_loss = run_epoch(
-        dataloader=test_loader, 
-        model=model, 
-        loss_fn=loss, 
-        device="cpu", 
-        train=False,
-        optimizer=None,
-        n_epochs=10,
-    )
-    print(f"Final test loss : {final_loss:>3f}")
+viz_idx = 2
+plot_signals(
+    true_signal=signal[test][:viz_idx].detach().numpy(),
+    noisy_signal=data_in[test][:viz_idx].detach().numpy(),
+    pred_signal=data_pred[test][:viz_idx].detach().numpy()
+)
+
