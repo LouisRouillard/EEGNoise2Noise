@@ -2,6 +2,8 @@ import torch
 import numpy as np
 import math
 
+from brain_denoise.utils import set_torch_seed
+
 
 def generate_fitzhugh_nagumo(v_init=0.1, w_init=0.0, forcing=np.zeros(100)):
     """
@@ -30,8 +32,7 @@ def generate_fitzhugh_nagumo(v_init=0.1, w_init=0.0, forcing=np.zeros(100)):
     ws.append(w)
 
     # Generate trajectory
-    for t in range(n_times):
-
+    for t in range(n_times - 1):  # init counts as one step
         # Voltage (v) update
         v = 2 * v - (1.0 / 3) * v ** 3 - w + R * forcing[t]
         vs.append(v)
@@ -49,7 +50,6 @@ def generate_signal(ns, nc, nt, signal_type="sin"):
     """
     Return torch tensor of shape (ns, nc, nt)
     """
-
     time = torch.linspace(0, 1, nt)
     if signal_type == "sin":
         freq = 8  # alpha range
@@ -70,48 +70,51 @@ def generate_signal(ns, nc, nt, signal_type="sin"):
     return signal
 
 
-def generate_noise(ns, nc, nt, noise_types=["gaussian"]):
+def generate_noise(ns, nc, nt, noise_type=["gaussian"], seed=44):
     """
     Return torch tensor of shape ns, nc, nt
     """
-    noise = torch.zeros((ns, nc, nt))
+    set_torch_seed(seed)
 
+    # Instantiate noise
+    noise = torch.zeros((ns, nc, nt))
+    
     # Gaussian
-    if "gaussian" in noise_types:
+    if "gaussian" in noise_type:
         noise += torch.randn((ns, nc, nt))
 
     # Step
-    if "step" in noise_types:
+    if "step" in noise_type:
         for idx in range(ns):
             step_start = torch.randint(0, nt, (1,))[0]
             step_end = torch.randint(step_start, nt, (1,))[0]
             noise[idx, :, step_start:step_end] += 1
 
     # Dirac
-    if "dirac" in noise_types:
+    if "dirac" in noise_type:
         for i in range(ns):
             dirac = torch.randint(0, nt, (1,))[0]
             noise[i, :, dirac] += 100
     return noise
 
 
-def simulate_data(ns, nc, nt, signal_type="sin", noise_types=["gaussian"], seed=44):
+def simulate_data(ns, nc, nt, signal_type="sin", noise_type=["gaussian"], seed=44):
     """
     Return data_in and data_out of shape (ns, nc, nt), two noisy versions
     of the same signal.
     """
 
-    assert signal_type in ["sin"]
-    # assert noise_type in ["gaussian", "step", "dirac"]
+    assert signal_type in ["sin", "fitzhugh"]
+    assert noise_type in ["gaussian", "step", "dirac"]
 
     signal = generate_signal(ns, nc, nt, signal_type=signal_type)
 
     # Noise1
-    noise_in = generate_noise(ns, nc, nt, noise_types=noise_types)
+    noise_in = generate_noise(ns, nc, nt, noise_type=noise_type, seed=seed)
     data_in = signal + noise_in
 
     # Noise2
-    noise_out = generate_noise(ns, nc, nt, noise_types=noise_types)
+    noise_out = generate_noise(ns, nc, nt, noise_type=noise_type, seed=seed+1)
     data_out = signal + noise_out
 
     return data_in, data_out, signal
