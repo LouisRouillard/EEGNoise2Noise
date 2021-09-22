@@ -45,7 +45,7 @@ def generate_noise(shape, noise_types=["gaussian"]):
     return noise
 
 
-def simluate_data(ns, nc, nt, signal_type="sin", noise_types=["gaussian"], seed=44):
+def simulate_data(ns, nc, nt, signal_type="sin", noise_types=["gaussian"], seed=44):
     """
     Return data_in and data_out of shape (ns, nc, nt), two noisy versions
     of the same signal.

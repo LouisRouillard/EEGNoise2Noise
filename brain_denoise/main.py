@@ -1,10 +1,11 @@
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from torch import nn
 from brain_denoise.linear_net import LinearNet
-from brain_denoise.data.simluator import simluate_data
+from brain_denoise.data.simluator import simulate_data
 import torch
 import numpy as np
 from torch.nn import MSELoss
+from .train import train
 
 
 def split_idx(n, splits=(0.6, 0.8, 1), shuffle=False):
@@ -25,7 +26,7 @@ if __name__ == "__main__":
     device = "cpu"
 
     # Data
-    data_in, data_out, signal = simluate_data(
+    data_in, data_out, signal = simulate_data(
         ns, nc, nt, noise_types=["gaussian", "dirac"]
     )
 
@@ -45,3 +46,6 @@ if __name__ == "__main__":
 
     # Intiate Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+
+    # Train
+    train(train_loader, model, loss, optimizer)
