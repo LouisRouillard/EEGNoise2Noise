@@ -3,16 +3,16 @@ import numpy as np
 import math
 
 
-def generate_fitzhugh_nagumo(v_init=0.1, w_init=0., forcing=np.zeros(100)):
-    '''
-    Generates a biological neuron model via 
+def generate_fitzhugh_nagumo(v_init=0.1, w_init=0.0, forcing=np.zeros(100)):
+    """
+    Generates a biological neuron model via
     Euler-discretized Fitzhugh-Nagumo dynamics.
-    
+
     Notations:
     I is the external forcing (electrical current).
     V is the membrane voltage.
-    W is the adaptation. 
-    '''    
+    W is the adaptation.
+    """
     n_times = len(forcing)
 
     # harcoded
@@ -20,9 +20,9 @@ def generate_fitzhugh_nagumo(v_init=0.1, w_init=0., forcing=np.zeros(100)):
     b = 1.4
     tau = 20
     R = 1
-    
+
     # Instantiate trajectories
-    vs, ws = [], []        
+    vs, ws = [], []
 
     # Initial state
     v, w = v_init, w_init
@@ -33,13 +33,13 @@ def generate_fitzhugh_nagumo(v_init=0.1, w_init=0., forcing=np.zeros(100)):
     for t in range(n_times):
 
         # Voltage (v) update
-        v = 2 * v - (1./3) * v**3 - w + R * forcing[t]
+        v = 2 * v - (1.0 / 3) * v ** 3 - w + R * forcing[t]
         vs.append(v)
 
         # Adaptation (w) update
-        w = w + (1./tau) * (v + a - b * w)
+        w = w + (1.0 / tau) * (v + a - b * w)
         ws.append(w)
-        
+
     potential = torch.Tensor(vs)
 
     return potential
@@ -70,15 +70,15 @@ def generate_signal(ns, nc, nt, signal_type="sin"):
     return signal
 
 
-def generate_noise(shape, noise_types=["gaussian"]):
+def generate_noise(ns, nc, nt, noise_types=["gaussian"]):
     """
-    Return torch tensor of shape
+    Return torch tensor of shape ns, nc, nt
     """
-    noise = torch.zeros(shape)
+    noise = torch.zeros((ns, nc, nt))
 
     # Gaussian
     if "gaussian" in noise_types:
-        noise += torch.randn(shape)
+        noise += torch.randn((ns, nc, nt))
 
     # Step
     if "step" in noise_types:
@@ -107,11 +107,11 @@ def simulate_data(ns, nc, nt, signal_type="sin", noise_types=["gaussian"], seed=
     signal = generate_signal(ns, nc, nt, signal_type=signal_type)
 
     # Noise1
-    noise_in = generate_noise(signal.shape, noise_types=noise_types)
+    noise_in = generate_noise(ns, nc, nt, noise_types=noise_types)
     data_in = signal + noise_in
 
     # Noise2
-    noise_out = generate_noise(signal.shape, noise_types=noise_types)
+    noise_out = generate_noise(ns, nc, nt, noise_types=noise_types)
     data_out = signal + noise_out
 
     return data_in, data_out, signal

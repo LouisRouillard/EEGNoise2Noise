@@ -21,3 +21,4 @@ def train(dataloader, model, loss_fn, optimizer, n_epochs=10, device="cpu"):
             if batch % 100 == 0:
                 loss, current = loss.item(), batch * len(X)
                 print(f"epoch {epoch} \t loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+
