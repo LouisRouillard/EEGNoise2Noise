@@ -38,15 +38,20 @@ if __name__ == "__main__":
     valid_loader = DataLoader(dataset[valid], batch_size=bs)
     test_loader = DataLoader(testset[test], batch_size=bs)
 
-    # Initiate Model
+    # Instantiate Model
     model = LinearNet(nc, nt)
     model.to(device)
 
-    # Initiate Loss
+    # Instantiate Loss
     loss = MSELoss()
 
-    # Intiate Optimizer
+    # Instantiate Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
     # Train
-    train_model(train_loader, model, loss, optimizer)
+    train_model(
+        dataloader=train_loader, 
+        model=model, 
+        loss_fn=loss, 
+        optimizer=optimizer
+    )
