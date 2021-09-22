@@ -72,6 +72,9 @@ class UNet1D(nn.Module):
                 )
             )
         
+        self.reshaper_to_length = nn.Upsample(
+            size=time_length
+        )
         self.output = nn.Conv1d(
             in_channels=in_channels,
             out_channels=in_channels,
@@ -117,17 +120,18 @@ class UNet1D(nn.Module):
             z = self.depools[idx](z)
             z = F.relu(self.deconvs[idx](z))
   
+        z = self.reshaper_to_length(z)
         z = self.output(z)
 
         return z
 
 # %%
-nt, nc = 10, 4
+nt, nc = 10, 50
 model = UNet1D(
     time_length=nt,
     in_channels=nc,
     hidden_channels=[4, 8]
 )
 # %%
-model(torch.zeros((1, nc, nt)))
+model(torch.zeros((1, nc, nt))).shape
 # %%
