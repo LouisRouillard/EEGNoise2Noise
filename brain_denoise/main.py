@@ -6,6 +6,7 @@ import torch
 import numpy as np
 from torch.nn import MSELoss
 from train import train as train_model
+from run_eval import run_eval
 
 
 def split_idx(n, splits=(0.6, 0.8, 1), shuffle=False):
@@ -49,4 +50,13 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
     # Train
-    train_model(train_loader, model, loss, optimizer)
+    train_model(
+        train_loader,
+        model,
+        loss,
+        optimizer,
+        validloader=valid_loader,
+        testloader=test_loader,
+    )
+    final_loss = run_eval(test_loader, model, loss)
+    print(f"Final test loss : {final_loss:>3f}")
