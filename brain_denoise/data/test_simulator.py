@@ -37,23 +37,23 @@ def test_seeds(signal_type, noise_type):
         signal_type=signal_type, noise_type=noise_type, seed=seed_1
     )
     data_1 = torch.stack([data_in, data_out])
-    out = simulate_data(
+    data_in, data_out, _ = simulate_data(
         ns=ns, nc=nc, nt=nt, 
         signal_type=signal_type, noise_type=noise_type, seed=seed_1
     )
-    data_in, data_out, _ = torch.stack(list(out))
-    assert torch.allclose([data_in, data_out]), \
+    data_2 = torch.stack([data_in, data_out])
+    assert torch.allclose(data_1, data_2), \
         "Same seed does not yield same data: there is a hidden source of stochasticity."
 
     data_in, data_out, _ = simulate_data(
         ns=ns, nc=nc, nt=nt, 
         signal_type=signal_type, noise_type=noise_type, seed=seed_1
     )
-    data_1 = torch.stack(list(out))
+    data_1 = torch.stack([data_in, data_out])
     out = simulate_data(
         ns=ns, nc=nc, nt=nt, 
         signal_type=signal_type, noise_type=noise_type, seed=seed_2
     )
-    data_2 = torch.stack(list(out))
+    data_2 = torch.stack([data_in, data_out])
     assert ~torch.allclose(data_1, data_2), \
         "Different seeds do not yield different data: data is deterministic."
