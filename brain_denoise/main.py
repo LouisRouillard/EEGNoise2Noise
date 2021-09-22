@@ -1,30 +1,21 @@
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from torch import nn
-from models.linear_net import LinearNet
-from data.simulator import simulate_data
 import torch
 import numpy as np
 from torch.nn import MSELoss
-from train import train as train_model
-from run_eval import run_eval
+from train import train_eval_model, run_epoch
+from utils import split_idx
 
-
-def split_idx(n, splits=(0.6, 0.8, 1), shuffle=False):
-    idx = torch.arange(n)
-    if shuffle:
-        idx = np.random.permutation(idx)
-
-    train = idx[: int(splits[0] * n)]
-    valid = idx[int(splits[0] * n) : int(splits[1] * n)]
-    test = idx[int(splits[1] * n) : int(splits[2] * n)]
-    return train, valid, test
+from brain_denoise.models.linear_net import LinearNet
+from brain_denoise.data.simulator import simulate_data
 
 
 if __name__ == "__main__":
     # Params
-    ns, nc, nt = 1000, 50, 10
+    ns, nc, nt = 1000, 50, 16
     bs = 10
     device = "cpu"
+    n_epochs = 20
 
     # Data
     data_in, data_out, signal = simulate_data(
@@ -34,29 +25,40 @@ if __name__ == "__main__":
     # Build loader
     dataset = TensorDataset(data_in, data_out)
     testset = TensorDataset(data_in, signal)
-    train, valid, test = split_idx(len(dataset))
+    train, valid, test = split_idx(len(dataset), splits=(0.6, 0.8, 1))
     train_loader = DataLoader(dataset[train], batch_size=bs)
     valid_loader = DataLoader(dataset[valid], batch_size=bs)
     test_loader = DataLoader(testset[test], batch_size=bs)
 
-    # Initiate Model
+    # Instantiate Model
     model = LinearNet(nc, nt)
     model.to(device)
 
     # Initiate Loss
-    loss = MSELoss()
+    loss = MSELoss(reduce=None)
 
-    # Intiate Optimizer
+    # Instantiate Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
     # Train
-    train_model(
-        train_loader,
-        model,
-        loss,
-        optimizer,
-        validloader=valid_loader,
-        testloader=test_loader,
+    train_eval_model(
+        train_loader=train_loader,
+        model=model,
+        loss_fn=loss,
+        optimizer=optimizer,
+        valid_loader=valid_loader,
+        test_loader=test_loader,
+        device=device,
+        n_epochs=10,
     )
-    final_loss = run_eval(test_loader, model, loss)
+
+    final_loss = run_epoch(
+        dataloader=test_loader, 
+        model=model, 
+        loss_fn=loss, 
+        device="cpu", 
+        train=False,
+        optimizer=None,
+        n_epochs=10,
+    )
     print(f"Final test loss : {final_loss:>3f}")
