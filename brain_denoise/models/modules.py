@@ -32,23 +32,25 @@ class UNet1D(nn.Module):
         hidden_features = reduced_time_length * hidden_channels[-1]
         self.hidden_shape = (-1, hidden_channels[-1], reduced_time_length)
 
-        self.convs = []
-        self.pools = []
-        self.deconvs = []
-        self.depools = []
+        self.encoders = []
+        self.decoders = []
 
         for idx in range(self.n_conv_steps):
-            self.convs.append(
-                nn.Conv1d(
-                    in_channels=effective_channels[idx],
-                    out_channels=effective_channels[idx + 1],
-                    kernel_size=3,
-                    padding=1
-                )
-            )
-            self.pools.append(
-                nn.MaxPool1d(
-                    kernel_size=2
+            self.encoders.append(
+                nn.Sequential(
+                    nn.Conv1d(
+                        in_channels=effective_channels[idx],
+                        out_channels=effective_channels[idx + 1],
+                        kernel_size=3,
+                        padding=1
+                    ),
+                    nn.ELU(),
+                    nn.MaxPool1d(
+                        kernel_size=2
+                    ),
+                    nn.BatchNorm1d(
+                        num_features=effective_channels[idx + 1]
+                    )
                 )
             )
         
@@ -58,17 +60,21 @@ class UNet1D(nn.Module):
         )
 
         for idx in range(self.n_conv_steps):
-            self.deconvs.append(
-                nn.Conv1d(
-                    in_channels=2 * effective_channels[-1 - idx],
-                    out_channels=effective_channels[-2 - idx],
-                    kernel_size=3,
-                    padding=1
-                )
-            )
-            self.depools.append(
-                nn.Upsample(
-                    scale_factor=2
+            self.decoders.append(
+                nn.Sequential(
+                    nn.Upsample(
+                        scale_factor=2
+                    ),
+                    nn.Conv1d(
+                        in_channels=2 * effective_channels[-1 - idx],
+                        out_channels=effective_channels[-2 - idx],
+                        kernel_size=3,
+                        padding=1
+                    ),
+                    nn.ELU(),
+                    nn.BatchNorm1d(
+                        num_features=effective_channels[-2 - idx]
+                    )
                 )
             )
         
@@ -102,8 +108,7 @@ class UNet1D(nn.Module):
 
         skip_zs = [z]
         for idx in range(self.n_conv_steps):
-            z = F.elu(self.convs[idx](z))
-            z = self.pools[idx](z)
+            z = self.encoders[idx](z)
             skip_zs.append(z)
 
         z = torch.flatten(
@@ -125,8 +130,7 @@ class UNet1D(nn.Module):
                 ],
                 axis=-2
             )
-            z = self.depools[idx](z_concat)
-            z = F.elu(self.deconvs[idx](z))
+            z = self.decoders[idx](z_concat)
   
         z = self.reshaper_to_length(z)
         z = self.output(z)
