@@ -32,20 +32,20 @@ def test_seeds(signal_type, noise_type):
         "Different seeds do not yield different noises: noise is deterministic."
 
     # Test: data (signal + noise) depends on seed
+    data_in, data_out, _ = simulate_data(
+        ns=ns, nc=nc, nt=nt, 
+        signal_type=signal_type, noise_type=noise_type, seed=seed_1
+    )
+    data_1 = torch.stack([data_in, data_out])
     out = simulate_data(
         ns=ns, nc=nc, nt=nt, 
         signal_type=signal_type, noise_type=noise_type, seed=seed_1
     )
-    data_1 = torch.stack(list(out))
-    out = simulate_data(
-        ns=ns, nc=nc, nt=nt, 
-        signal_type=signal_type, noise_type=noise_type, seed=seed_1
-    )
-    data_2 = torch.stack(list(out))
-    assert torch.allclose(data_1, data_2), \
+    data_in, data_out, _ = torch.stack(list(out))
+    assert torch.allclose([data_in, data_out]), \
         "Same seed does not yield same data: there is a hidden source of stochasticity."
 
-    out = simulate_data(
+    data_in, data_out, _ = simulate_data(
         ns=ns, nc=nc, nt=nt, 
         signal_type=signal_type, noise_type=noise_type, seed=seed_1
     )

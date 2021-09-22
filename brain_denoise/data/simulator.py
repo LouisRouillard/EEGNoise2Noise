@@ -108,22 +108,21 @@ def simulate_data(
     Return data_in and data_out of shape (ns, nc, nt), two noisy versions
     of the same signal.
     """
-
-    assert signal_type in ["sin", "fitzhugh"]
-    assert noise_type in ["gaussian", "step", "dirac"]
+    # assert signal_type in ["sin", "fitzhugh"]
+    # assert noise_type in ["gaussian", "step", "dirac"]
 
     signal = generate_signal(ns, nc, nt, signal_type=signal_type)
-    signal_power = 1/nt * np.sum(signal**2)
+    signal_power = 1/nt * torch.sum(signal**2)
 
     # Noise1
     noise_in = generate_noise(ns, nc, nt, noise_type=noise_type, seed=seed)
-    noise_in_power = 1/nt * np.sum(noise_in**2)
+    noise_in_power = 1/nt * torch.sum(noise_in**2)
     snr_in = signal_power / noise_in_power
     data_in = signal + noise_in * np.sqrt(snr_in) / np.sqrt(noise_scale)
 
     # Noise2
     noise_out = generate_noise(ns, nc, nt, noise_type=noise_type, seed=seed+1)
-    noise_out_power = 1/nt * np.sum(noise_out**2)
+    noise_out_power = 1/nt * torch.sum(noise_out**2)
     snr_out = signal_power / noise_out_power
     data_out = signal + noise_out * np.sqrt(snr_out) / np.sqrt(noise_scale)
 

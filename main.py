@@ -1,15 +1,15 @@
 # %%
 from torch.utils.data import DataLoader, Dataset, TensorDataset
 from torch import nn
-from models.linear_net import LinearNet
-from models.modules import UNet1D
-from data.simulator import simulate_data
-from visualizers.time_series import plot_signals
+from brain_denoise.models.linear_net import LinearNet
+from brain_denoise.models.modules import UNet1D
+from brain_denoise.data.simulator import simulate_data
+from brain_denoise.visualizers.time_series import plot_signals
 import torch
 import numpy as np
 from torch.nn import MSELoss
-from train import train_eval_model, run_epoch
-from utils import split_idx
+from brain_denoise.train import train_eval_model, run_epoch
+from brain_denoise.utils import split_idx
 
 # %%
 # Params
@@ -19,7 +19,7 @@ device = "cpu"
 
 # Data
 data_in, data_out, signal = simulate_data(
-    ns, nc, nt, noise_types=["gaussian", "dirac"]
+    ns, nc, nt, noise_type=["gaussian", "dirac"]
 )
 
 # Build loader
@@ -50,16 +50,26 @@ optimizer = torch.optim.Adam(
 
 # Train
 # %%
-train_model(
-    train_loader,
-    model,
-    loss,
-    optimizer,
-    validloader=valid_loader,
-    testloader=test_loader,
-    n_epochs=500
+train_eval_model(
+    train_loader=train_loader,
+    model=model,
+    loss_fn=loss,
+    optimizer=optimizer,
+    n_epochs=500,
+    valid_loader=valid_loader,
+    test_loader=test_loader,
+    device="cpu"
 )
-final_loss = run_eval(test_loader, model, loss)
+
+final_loss = run_epoch(
+    dataloader=test_loader, 
+    model=model, 
+    loss_fn=loss, 
+    device="cpu", 
+    train=False,
+    optimizer=None,
+    n_epochs=500,
+)
 print(f"Final test loss : {final_loss:>3f}")
 # %%
 
