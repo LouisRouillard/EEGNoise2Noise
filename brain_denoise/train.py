@@ -34,6 +34,9 @@ def train(
             epoch_loss += loss.item()
             n_samples += len(X)
 
+        # Train loss
+        train_loss = epoch_loss/n_samples
+
         # Run eval
         if validloader is not None:
             val_loss = run_eval(validloader, model, loss_fn)
@@ -47,5 +50,5 @@ def train(
             test_loss = np.nan
 
         print(
-            f"epoch {epoch} \t loss: {epoch_loss:>7f} \t eval: {val_loss:>7f} \t test: {test_loss:>7f} [{epoch:>5d}/{n_epochs:>5d}]"
+            f"epoch {epoch} \t loss: {train_loss:>7f} \t eval: {val_loss:>7f} \t test: {test_loss:>7f} [{epoch:>5d}/{n_epochs:>5d}]"
         )
