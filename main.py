@@ -6,6 +6,7 @@ from brain_denoise.models.modules import UNet1D
 from brain_denoise.data.simulator import simulate_data
 from brain_denoise.visualizers.time_series import plot_signals
 import torch
+import matplotlib.pyplot as plt
 import numpy as np
 from torch.nn import MSELoss
 from brain_denoise.train import train_eval_model, run_epoch
@@ -19,7 +20,7 @@ device = "cpu"
 
 # Data
 data_in, data_out, signal = simulate_data(
-    ns, nc, nt, noise_type=["gaussian", "dirac"]
+    ns, nc, nt, noise_type=["gaussian", "step"]
 )
 
 # Build loader
@@ -55,7 +56,7 @@ train_eval_model(
     model=model,
     loss_fn=loss,
     optimizer=optimizer,
-    n_epochs=500,
+    n_epochs=100,
     valid_loader=valid_loader,
     test_loader=test_loader,
     device="cpu"
@@ -68,7 +69,7 @@ final_loss = run_epoch(
     device="cpu", 
     train=False,
     optimizer=None,
-    n_epochs=500,
+    n_epochs=100,
 )
 print(f"Final test loss : {final_loss:>3f}")
 # %%

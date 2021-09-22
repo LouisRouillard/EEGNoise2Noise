@@ -5,7 +5,10 @@ import math
 from brain_denoise.utils import set_torch_seed
 
 
-def generate_fitzhugh_nagumo(v_init=0.1, w_init=0.0, forcing=np.zeros(100)):
+def generate_fitzhugh_nagumo(
+    v_init=0.1, w_init=0.0, 
+    forcing=np.zeros(100),
+    a=-0.3, b=1.4, tau=20, R=1):
     """
     Generates a biological neuron model via
     Euler-discretized Fitzhugh-Nagumo dynamics.
@@ -16,12 +19,6 @@ def generate_fitzhugh_nagumo(v_init=0.1, w_init=0.0, forcing=np.zeros(100)):
     W is the adaptation.
     """
     n_times = len(forcing)
-
-    # harcoded
-    a = -0.3
-    b = 1.4
-    tau = 20
-    R = 1
 
     # Instantiate trajectories
     vs, ws = [], []
@@ -46,22 +43,41 @@ def generate_fitzhugh_nagumo(v_init=0.1, w_init=0.0, forcing=np.zeros(100)):
     return potential
 
 
-def generate_signal(ns, nc, nt, signal_type="sin"):
+def generate_signal(ns, nc, nt, signal_type="sin", seed=44):
     """
     Return torch tensor of shape (ns, nc, nt)
     """
+    set_torch_seed(seed)
+
     time = torch.linspace(0, 1, nt)
-    if signal_type == "sin":
-        freq = 8  # alpha range
-        signal = torch.sin(2 * math.pi * freq * time)
-    elif signal_type == "fitzhugh":
-        signal = generate_fitzhugh_nagumo(forcing=np.zeros(nt))
+    signal = torch.zeros(ns, nc, nt)
 
-    # duplicate signal over samples
-    signal = torch.stack([signal] * ns, dim=0)
+    for sample in range(ns):
+        for channel in range(nc):
 
-    # duplicate signal over channels
-    signal = torch.stack([signal] * nc, dim=1)
+            # generate 1D timeseries
+            if signal_type == "sin":
+                eps_1, eps_2 = torch.randn(1).item(), torch.randn(1).item()
+                freq = 8 + eps_1   # stochastic freq (around alpha)
+                phase = eps_2  # stochastic phase (around zero)
+                trajectory = torch.sin(2 * math.pi * freq * time + phase)
+                signal[sample, channel, :] = trajectory
+            elif signal_type == "fitzhugh":
+                eps_1 = torch.randn(1).item()
+                idx_dirac = torch.randint(0, (nt // 2), (1,))[0]
+                tau = 20 + eps_1  # stochastic time parameter
+                forcing = np.zeros(nt)
+                forcing[idx_dirac] # stochastic dirac forcing
+                trajectory = generate_fitzhugh_nagumo(
+                    forcing=forcing,
+                    tau=tau
+                )
+                signal[sample, channel, :] = trajectory
+    # # duplicate signal over samples
+    # signal = torch.stack([signal] * ns, dim=0)
+
+    # # duplicate signal over channels
+    # signal = torch.stack([signal] * nc, dim=1)
 
     # normalize the signal
     signal -= signal.mean()

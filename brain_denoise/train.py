@@ -3,14 +3,14 @@ import numpy as np
 
 # Optimization: one epoch
 def run_epoch(
-    dataloader, 
-    model, 
-    loss_fn, 
-    device="cpu", 
+    dataloader,
+    model,
+    loss_fn,
+    device="cpu",
     train=True,
     optimizer=None,
     n_epochs=10,
-    ):
+):
     if train:
         model.train()
     else:
@@ -35,7 +35,7 @@ def run_epoch(
         final_loss += loss
         n_samples += len(X)
 
-    return final_loss / n_samples
+    return final_loss.item() / n_samples
 
 
 # Optimization: all epochs
@@ -48,29 +48,32 @@ def train_eval_model(
     valid_loader=None,
     test_loader=None,
     device="cpu",
+    verbose=True,
 ):
+
+    losses = {"train": [], "valid": [], "test": []}
     for epoch in range(n_epochs):
         # Train set
         train_loss = run_epoch(
-            dataloader=train_loader, 
-            model=model, 
-            loss_fn=loss_fn, 
-            device=device, 
+            dataloader=train_loader,
+            model=model,
+            loss_fn=loss_fn,
+            device=device,
             train=True,
             optimizer=optimizer,
-            n_epochs=n_epochs
+            n_epochs=n_epochs,
         )
 
         # Validation set
         if valid_loader is not None:
             val_loss = run_epoch(
-                dataloader=valid_loader, 
-                model=model, 
-                loss_fn=loss_fn, 
-                device=device, 
+                dataloader=valid_loader,
+                model=model,
+                loss_fn=loss_fn,
+                device=device,
                 train=False,
                 optimizer=None,
-                n_epochs=n_epochs
+                n_epochs=n_epochs,
             )
         else:
             val_loss = np.nan
@@ -78,17 +81,23 @@ def train_eval_model(
         # Test set
         if test_loader is not None:
             test_loss = run_epoch(
-                dataloader=test_loader, 
-                model=model, 
-                loss_fn=loss_fn, 
-                device=device, 
+                dataloader=test_loader,
+                model=model,
+                loss_fn=loss_fn,
+                device=device,
                 train=False,
                 optimizer=None,
-                n_epochs=n_epochs
-            )        
+                n_epochs=n_epochs,
+            )
         else:
             test_loss = np.nan
 
-        print(
-            f"epoch {epoch} \t loss: {train_loss:>7f} \t eval: {val_loss:>7f} \t test: {test_loss:>7f} [{epoch:>5d}/{n_epochs:>5d}]"
-        )
+        if verbose:
+            print(
+                f"epoch {epoch} \t loss: {train_loss:>7f} \t eval: {val_loss:>7f} \t test: {test_loss:>7f} [{epoch:>5d}/{n_epochs:>5d}]"
+            )
+        losses["train"].append(train_loss)
+        losses["valid"].append(val_loss)
+        losses["test"].append(test_loss)
+
+    return losses
