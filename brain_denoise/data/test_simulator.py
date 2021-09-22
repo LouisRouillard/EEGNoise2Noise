@@ -12,13 +12,19 @@ from brain_denoise.utils import set_torch_seed
     "noise_type", ["gaussian", "step", "dirac"]
 )
 def test_seeds(signal_type, noise_type):
-    ns, nc, nt = 100, 300, 200
+    ns, nc, nt = 50, 100, 150
     seed_1, seed_2 = 1, 5
 
-    # Test: signal is deterministic
-    signal_1 = generate_signal(ns=ns, nc=nc, nt=nt, signal_type=signal_type)
-    signal_2 = generate_signal(ns=ns, nc=nc, nt=nt, signal_type=signal_type)
-    assert torch.allclose(signal_1, signal_2), "Signal is not deterministic."
+    # Test: signal depends on seed
+    signal_1 = generate_signal(ns=ns, nc=nc, nt=nt, signal_type=noise_type, seed=seed_1)
+    signal_2 = generate_signal(ns=ns, nc=nc, nt=nt, signal_type=noise_type, seed=seed_1)
+    assert torch.allclose(signal_1, signal_2), \
+        "Same seed does not yield same signal: there is a hidden source of stochasticity."
+
+    signal_1 = generate_signal(ns=ns, nc=nc, nt=nt, signal_type=noise_type, seed=seed_1)
+    signal_2 = generate_signal(ns=ns, nc=nc, nt=nt, signal_type=noise_type, seed=seed_2)
+    assert ~torch.allclose(signal_1, signal_2), \
+        "Different seeds do not yield different signals: signal is deterministic."
 
     # Test: noise depends on seed
     noise_1 = generate_noise(ns=ns, nc=nc, nt=nt, noise_type=noise_type, seed=seed_1)
